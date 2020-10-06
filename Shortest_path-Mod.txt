@@ -1,0 +1,70 @@
+// --------------------------------------------------------------------------
+// Licensed Materials - Property of IBM
+//
+// 5725-A06 5725-A29 5724-Y48 5724-Y49 5724-Y54 5724-Y55
+// Copyright IBM Corporation 1998, 2013. All Rights Reserved.
+//
+// Note to U.S. Government Users Restricted Rights:
+// Use, duplication or disclosure restricted by GSA ADP Schedule
+// Contract with IBM Corp.
+// --------------------------------------------------------------------------
+
+int NumNodes = ...;   // Number of nodes
+range Nodes = 1..NumNodes;
+
+// Define the origin (positive) and the destination (negative)
+int SupDem[Nodes] = ...;
+
+// Create a record to hold information about each arc
+tuple arc {
+   key int ID;
+   key int fromnode;
+   key int tonode;
+   float length;
+}
+
+// Get the set of arcs
+{arc} Arcs = ...;
+
+/*Variables*/
+// The network flow model has decision variables indexed on the arcs.
+dvar boolean Flow[a in Arcs];
+
+/*Objective function*/
+// minimize the total length of the path from o to d (point4)
+dexpr float TotalLength = sum (a in Arcs) a.length * Flow[a];
+minimize TotalLength;
+
+// minimize the total length of the path from o to d (point7)
+//dexpr float TotalLength = sum (a in Arcs) a.length * Flow[a];
+//dexpr float Discount	= sum (a in Arcs: a.ID == 11) 0.15*Flow[a]*(sum (a in Arcs) a.length*Flow[a]);
+//minimize TotalLength - Discount;
+
+subject to {
+   // Preserve flows at each node
+   forall (i in Nodes) ctNodeFlow:
+      sum (<l,i,j,c> in Arcs) Flow[<l,i,j,c>] - sum (<l,j,i,c> in Arcs) Flow[<l,j,i,c>] == SupDem[i];
+
+  //constrains an arc to be part of the solution (point5)if we plan a city to be part of our  
+  //shortest path solution
+  //forall (a in Arcs: a.ID == 16)
+  //Flow[a] == 1;
+   
+  //constrains an arc to not be part of the solution (point5)_ optional : if we plan a city not to be part of our   //shortest path solution
+  //forall (a in Arcs: a.ID == 17)
+  //Flow[a] == 0; 
+}
+
+execute {
+   var outputfile = new IloOplOutputFile("outputsinglepath.txt");
+   //var outputfile = new IloOplOutputFile("outputsinglepathC.txt");
+   //var outputfile = new IloOplOutputFile("outputsinglepathD.txt");
+   outputfile.writeln("minimum path solution:")
+   outputfile.writeln("total length", TotalLength)
+   //outputfile.writeln("total length", TotalLength - Discount)
+   outputfile.writeln("Arc solutions")
+   outputfile.writeln("<from node,to node>");
+   for(var a in Arcs)
+      if(Flow[a] > 0)
+         outputfile.writeln("<",a.fromnode,",",a.tonode,">");
+}
